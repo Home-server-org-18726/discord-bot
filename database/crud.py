@@ -210,3 +210,17 @@ async def increment_sound_times_played(sound_id: int):
                 .values(times_played=Soundboard.times_played + 1)
             )
             await session.execute(stmt)
+
+
+async def update_sound_name(sound_id: int, new_name: str):
+    """Update a sound's unique name."""
+    async with async_session_factory() as session:
+        async with session.begin():
+            stmt = (
+                update(Soundboard)
+                .where(Soundboard.id == sound_id)
+                .values(name=new_name.strip().lower())
+            )
+            await session.execute(stmt)
+
+

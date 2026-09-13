@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
 MAX_DURATION_SECONDS = 10.0
 NAME_PATTERN = re.compile(r"^[a-zA-Z0-9_-]{2,32}$")
-RESERVED_NAMES = {"add", "play", "list", "all", "help", "info", "delete", "remove"}
+RESERVED_NAMES = {"add", "play", "list", "all", "help", "info", "delete", "remove", "rename"}
 
 
 def validate_sound_name(name: str) -> tuple[bool, str]:

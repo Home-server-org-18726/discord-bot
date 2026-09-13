@@ -20,6 +20,7 @@ from database.crud import (
     get_all_sounds,
     get_sound,
     increment_sound_times_played,
+    update_sound_name,
 )
 from core.soundboard.formatter import ITEMS_PER_PAGE, build_soundboard_embed
 
@@ -370,6 +371,7 @@ class SoundboardCog(commands.Cog, name="Soundboard"):
                 value="`+sb add <name>` *(attach audio, max 10s, max 5MB; no spaces, use `-` or `_`)*",
                 inline=False,
             )
+            embed.add_field(name="Rename a sound", value="`+sb rename <existing> <new>`", inline=False)
             embed.add_field(name="List sounds", value="`+sb list [page]`", inline=False)
             embed.add_field(name="Sound details", value="`+sb info <name>`", inline=False)
             await ctx.send(embed=embed)
@@ -378,6 +380,57 @@ class SoundboardCog(commands.Cog, name="Soundboard"):
     async def play(self, ctx: commands.Context, name: str):
         """Explicit command to play a sound: +sb play <name>"""
         await self._play_sound_helper(ctx, name)
+
+    @soundboard.command(name="rename", description="Rename an existing sound clip (+sb rename <existing> <new>).")
+    async def rename(self, ctx: commands.Context, existing_name: str, new_name: str):
+        """Rename an existing sound clip."""
+        try:
+            clean_existing = existing_name.strip().lower()
+            clean_new = new_name.strip().lower()
+
+            if clean_existing == clean_new:
+                await ctx.send("⚠️ The new name is identical to the current name.")
+                return
+
+            # 1. Look up existing sound
+            sound = await get_sound(clean_existing)
+            if not sound:
+                await ctx.send(f"⚠️ Sound `{clean_existing}` not found. Use `+sb list` to view available sounds.")
+                return
+
+            # 2. Validate new sound name
+            is_valid, err = validate_sound_name(new_name)
+            if not is_valid:
+                await ctx.send(f"⚠️ {err}")
+                return
+
+            # 3. Check if new name is already taken
+            existing_target = await get_sound(clean_new)
+            if existing_target:
+                await ctx.send(f"⚠️ A sound with the name `{clean_new}` already exists. Please choose a different name.")
+                return
+
+            # 4. Update database record (name field only)
+            try:
+                await update_sound_name(sound.id, clean_new)
+            except Exception as e:
+                logger.error(f"Database error while renaming sound ID {sound.id}: {e}", exc_info=True)
+                await ctx.send("⚠️ Database error occurred while renaming the sound. Please try again.")
+                return
+
+            embed = discord.Embed(
+                title="Sound Renamed",
+                description=f"Sound `{sound.name}` has been successfully renamed to `{clean_new}`.",
+                color=discord.Color.green(),
+            )
+            embed.add_field(name="Previous Name", value=f"`{sound.name}`", inline=True)
+            embed.add_field(name="New Name", value=f"`{clean_new}`", inline=True)
+            embed.add_field(name="Trigger Command", value=f"`+sb {clean_new}`", inline=False)
+            await ctx.send(embed=embed)
+
+        except Exception as e:
+            logger.error(f"Unexpected error in soundboard rename command: {e}", exc_info=True)
+            await ctx.send(DEFAULT_ERROR_MESSAGE)
 
     @soundboard.command(name="add", description="Add a new sound file (attach audio, max 10s, max 5MB).")
     async def add(self, ctx: commands.Context, *, name: str):
