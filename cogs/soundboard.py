@@ -93,6 +93,7 @@ class SoundboardPaginationView(discord.ui.View):
         current_sounds: list,
     ):
         super().__init__(timeout=180.0)
+        super().__init__(timeout=3600.0)
         self.cog = cog
         self.author_id = author_id
         self.current_page = current_page
@@ -185,6 +186,7 @@ class SoundReplayView(discord.ui.View):
     """Interactive view providing a Replay button for a played sound."""
 
     def __init__(self, cog: "SoundboardCog", sound_name: str, timeout: float = 300.0):
+    def __init__(self, cog: "SoundboardCog", sound_name: str, timeout: float = 3600.0):
         super().__init__(timeout=timeout)
         self.cog = cog
         self.sound_name = sound_name
